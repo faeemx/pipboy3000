@@ -881,7 +881,6 @@ fun StationListSection(
         }
     }
 }
-}
 
 /**
  * Telegram-Style Swipeable Row:
