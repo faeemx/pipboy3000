@@ -1,4 +1,4 @@
-name: Android CI Build
+name: Build Android APK
 
 on:
   push:
@@ -8,11 +8,11 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
-    name: Build Debug APK
+    name: Build & Package APK
     runs-on: ubuntu-latest
 
     steps:
@@ -24,22 +24,21 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.11.1'
+          cache: 'gradle'
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build and Test with Gradle Wrapper
-        run: ./gradlew testDebugUnitTest assembleDebug --stacktrace
+      - name: Run Unit Tests
+        run: ./gradlew testDebugUnitTest --stacktrace
+
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug --stacktrace
 
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: PipBoyRadio-debug-apk
+          name: pipboy3000-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 14
+          retention-days: 30

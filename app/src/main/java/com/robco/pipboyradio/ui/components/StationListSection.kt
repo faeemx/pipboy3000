@@ -43,6 +43,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
@@ -94,7 +95,15 @@ fun StationListSection(
     onRemoveStation: (Station) -> Unit,
     onRemoveMultipleStations: (Set<String>) -> Unit = {},
     onOpenAddStation: (initialName: String, initialUrl: String) -> Unit,
-    onSearchSatellite: (query: String) -> Unit,
+    // Satellite search integration
+    searchResults: List<Station> = emptyList(),
+    isSearching: Boolean = false,
+    searchError: String? = null,
+    onSearchOnline: (query: String, filterType: String) -> Unit = { _, _ -> },
+    onClearSearchResults: () -> Unit = {},
+    onAddSearchResult: (Station) -> Unit = {},
+    onAddAllSearchResults: () -> Unit = {},
+    activeStationUrls: Set<String> = emptySet(),
     modifier: Modifier = Modifier
 ) {
     val categories = listOf("ALL", "FAVORITES", "WASTELAND", "VIVIDH BHARATI", "FM", "AKASHVANI", "JAZZ", "CLASSICAL", "AMBIENT")
@@ -102,6 +111,8 @@ fun StationListSection(
 
     var isSelectionMode by rememberSaveable { mutableStateOf(false) }
     var selectedUrls by remember { mutableStateOf(setOf<String>()) }
+    var isLocalMode by rememberSaveable { mutableStateOf(true) }
+    var selectedFilterType by rememberSaveable { mutableStateOf("name") }
 
     Column(
         modifier = modifier
@@ -232,47 +243,91 @@ fun StationListSection(
             }
         }
 
-        // Standard Search & Filter Header (Hidden while multi-selecting to avoid clutter)
+        // Segmented Mode Switcher: LOCAL TUNER vs SATELLITE SCAN
         if (!isSelectionMode) {
-            // Search bar with integrated "+" Add button and Clear button
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = onSearchChange,
-                placeholder = {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                // Local Tuner Tab
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .border(
+                            1.dp,
+                            if (isLocalMode) (if (isOverdrive) AccentRed else PhosphorPrimary) else SurfaceBorder.copy(alpha = 0.3f),
+                            RoundedCornerShape(6.dp)
+                        )
+                        .background(
+                            if (isLocalMode) (if (isOverdrive) AccentRed.copy(alpha = 0.2f) else PhosphorSecondary.copy(alpha = 0.25f)) else Color.Transparent,
+                            RoundedCornerShape(6.dp)
+                        )
+                        .clickable { isLocalMode = true }
+                        .padding(vertical = 8.dp)
+                        .testTag("tuner_tab_local"),
+                    contentAlignment = Alignment.Center
+                ) {
                     Text(
-                        "SCAN / TYPE NAME OR URL TO ADD...",
-                        style = PipBoyTypography.bodyMedium.copy(fontSize = 12.sp)
+                        text = "MY TUNER (${stations.size})",
+                        style = PipBoyTypography.labelSmall.copy(
+                            fontSize = 11.sp,
+                            color = if (isLocalMode) (if (isOverdrive) AccentRed else PhosphorPrimary) else PhosphorSecondary
+                        )
                     )
-                },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "Search",
-                        tint = if (isOverdrive) AccentRed else PhosphorPrimary
+                }
+                // Satellite Scan Tab
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .border(
+                            1.dp,
+                            if (!isLocalMode) (if (isOverdrive) AccentRed else AccentAmber) else SurfaceBorder.copy(alpha = 0.3f),
+                            RoundedCornerShape(6.dp)
+                        )
+                        .background(
+                            if (!isLocalMode) AccentAmber.copy(alpha = 0.15f) else Color.Transparent,
+                            RoundedCornerShape(6.dp)
+                        )
+                        .clickable { isLocalMode = false }
+                        .padding(vertical = 8.dp)
+                        .testTag("tuner_tab_satellite"),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "SATELLITE SCAN",
+                        style = PipBoyTypography.labelSmall.copy(
+                            fontSize = 11.sp,
+                            color = if (!isLocalMode) AccentAmber else PhosphorSecondary
+                        )
                     )
-                },
-                trailingIcon = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        // Quick '+' add button in search bar when query is typed
-                        if (searchQuery.isNotBlank()) {
-                            IconButton(
-                                onClick = {
-                                    val isUrl = searchQuery.startsWith("http://") || searchQuery.startsWith("https://")
-                                    onOpenAddStation(
-                                        if (isUrl) "" else searchQuery,
-                                        if (isUrl) searchQuery else ""
-                                    )
-                                },
-                                modifier = Modifier.testTag("search_bar_quick_add_btn")
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Add,
-                                    contentDescription = "Add as station",
-                                    tint = AccentAmber,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
+                }
+            }
+        }
 
+        if (isLocalMode) {
+            // Standard Search & Filter Header (Hidden while multi-selecting to avoid clutter)
+            if (!isSelectionMode) {
+                // Search bar with integrated Clear button
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = onSearchChange,
+                    placeholder = {
+                        Text(
+                            "SCAN / TYPE NAME OR URL TO ADD...",
+                            style = PipBoyTypography.bodyMedium.copy(fontSize = 12.sp)
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search",
+                            tint = if (isOverdrive) AccentRed else PhosphorPrimary
+                        )
+                    },
+                    trailingIcon = {
+                        if (searchQuery.isNotBlank()) {
                             IconButton(onClick = { onSearchChange("") }) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
@@ -282,35 +337,28 @@ fun StationListSection(
                                 )
                             }
                         }
-                    }
-                },
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = if (isOverdrive) AccentRed else PhosphorPrimary,
-                    unfocusedBorderColor = SurfaceBorder.copy(alpha = 0.5f),
-                    focusedTextColor = if (isOverdrive) AccentRed else PhosphorPrimary,
-                    unfocusedTextColor = PhosphorSecondary,
-                    cursorColor = AccentAmber,
-                    focusedContainerColor = SurfaceCard,
-                    unfocusedContainerColor = SurfaceCard
-                ),
-                textStyle = PipBoyTypography.bodyLarge.copy(fontSize = 13.sp),
-                shape = RoundedCornerShape(8.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("search_input")
-            )
+                    },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = if (isOverdrive) AccentRed else PhosphorPrimary,
+                        unfocusedBorderColor = SurfaceBorder.copy(alpha = 0.5f),
+                        focusedTextColor = if (isOverdrive) AccentRed else PhosphorPrimary,
+                        unfocusedTextColor = PhosphorSecondary,
+                        cursorColor = AccentAmber,
+                        focusedContainerColor = SurfaceCard,
+                        unfocusedContainerColor = SurfaceCard
+                    ),
+                    textStyle = PipBoyTypography.bodyLarge.copy(fontSize = 13.sp),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("search_input")
+                )
 
-            // Categories Row & Direct "+ ADD STATION" Button
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Horizontal Categories Scroll
+                // Categories Row
                 Row(
                     modifier = Modifier
-                        .weight(1f)
+                        .fillMaxWidth()
                         .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
@@ -351,168 +399,77 @@ fun StationListSection(
                     }
                 }
 
-                // Quick "+ ADD" Button in bar
-                Button(
-                    onClick = {
-                        val isUrl = searchQuery.startsWith("http://") || searchQuery.startsWith("https://")
-                        onOpenAddStation(
-                            if (isUrl) "" else searchQuery,
-                            if (isUrl) searchQuery else ""
-                        )
-                    },
-                    shape = RoundedCornerShape(6.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isOverdrive) AccentRed else PhosphorPrimary,
-                        contentColor = Color.Black
-                    ),
-                    modifier = Modifier
-                        .padding(start = 6.dp)
-                        .height(32.dp)
-                        .testTag("tuner_header_add_btn")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = null,
-                        tint = Color.Black,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Text(
-                        text = "ADD",
-                        style = PipBoyTypography.labelSmall.copy(fontSize = 11.sp, color = Color.Black),
-                        modifier = Modifier.padding(start = 2.dp)
-                    )
-                }
-            }
-
-            // Sub-header row: Frequency tally & Enter Multi-Select shortcut
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "> ${stations.size} FREQUENCIES DETECTED",
-                    style = PipBoyTypography.labelSmall.copy(
-                        fontSize = 11.sp,
-                        color = AccentAmber
-                    )
-                )
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    // Quick Multi-Select Mode Trigger Button
-                    Box(
-                        modifier = Modifier
-                            .border(1.dp, SurfaceBorder.copy(alpha = 0.4f), RoundedCornerShape(4.dp))
-                            .background(Color(0x22000000), RoundedCornerShape(4.dp))
-                            .clickable {
-                                isSelectionMode = true
-                                selectedUrls = emptySet()
-                            }
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                            .testTag("enter_select_mode_btn")
-                    ) {
-                        Text(
-                            text = "SELECT",
-                            style = PipBoyTypography.labelSmall.copy(fontSize = 9.sp, color = PhosphorSecondary)
-                        )
-                    }
-
-                    if (selectedCategory != "ALL") {
-                        Text(
-                            text = "[ $selectedCategory ]",
-                            style = PipBoyTypography.labelSmall.copy(
-                                fontSize = 10.sp,
-                                color = PhosphorSecondary
-                            )
-                        )
-                    }
-                }
-            }
-        }
-
-        // Action banner when search query is typed: Quick Add or Satellite Search
-        if (searchQuery.isNotBlank() && !isSelectionMode) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, SurfaceBorder.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
-                    .background(SurfaceCard, RoundedCornerShape(6.dp))
-                    .padding(horizontal = 8.dp, vertical = 6.dp)
-            ) {
+                // Sub-header row: Frequency tally & Enter Multi-Select shortcut
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "SEARCH: \"$searchQuery\"",
-                        style = PipBoyTypography.labelSmall.copy(fontSize = 10.sp, color = PhosphorSecondary),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
+                        text = "> ${stations.size} FREQUENCIES DETECTED",
+                        style = PipBoyTypography.labelSmall.copy(
+                            fontSize = 11.sp,
+                            color = AccentAmber
+                        )
                     )
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        OutlinedButton(
-                            onClick = {
-                                val isUrl = searchQuery.startsWith("http://") || searchQuery.startsWith("https://")
-                                onOpenAddStation(
-                                    if (isUrl) "" else searchQuery,
-                                    if (isUrl) searchQuery else ""
-                                )
-                            },
-                            shape = RoundedCornerShape(4.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = PhosphorPrimary),
-                            border = ButtonDefaults.outlinedButtonBorder.copy(
-                                brush = androidx.compose.ui.graphics.SolidColor(PhosphorPrimary.copy(alpha = 0.6f))
-                            ),
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        // Clean + ADD Button next to SELECT
+                        Box(
                             modifier = Modifier
-                                .height(28.dp)
-                                .testTag("banner_add_station_btn")
+                                .border(1.dp, if (isOverdrive) AccentRed else PhosphorPrimary, RoundedCornerShape(4.dp))
+                                .background(if (isOverdrive) AccentRed.copy(alpha = 0.15f) else PhosphorPrimary.copy(alpha = 0.1f), RoundedCornerShape(4.dp))
+                                .clickable {
+                                    val isUrl = searchQuery.startsWith("http://") || searchQuery.startsWith("https://")
+                                    onOpenAddStation(
+                                        if (isUrl) "" else searchQuery,
+                                        if (isUrl) searchQuery else ""
+                                    )
+                                }
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                .testTag("tuner_add_station_btn")
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = null,
-                                tint = PhosphorPrimary,
-                                modifier = Modifier.size(12.dp)
-                            )
                             Text(
-                                text = "ADD NEW",
-                                style = PipBoyTypography.labelSmall.copy(fontSize = 9.sp, color = PhosphorPrimary),
-                                modifier = Modifier.padding(start = 2.dp)
+                                text = "+ ADD",
+                                style = PipBoyTypography.labelSmall.copy(fontSize = 9.sp, color = if (isOverdrive) AccentRed else PhosphorPrimary)
                             )
                         }
 
-                        Button(
-                            onClick = { onSearchSatellite(searchQuery) },
-                            shape = RoundedCornerShape(4.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = AccentAmber,
-                                contentColor = Color.Black
-                            ),
+                        // Quick Multi-Select Mode Trigger Button
+                        Box(
                             modifier = Modifier
-                                .height(28.dp)
-                                .testTag("banner_satellite_search_btn")
+                                .border(1.dp, SurfaceBorder.copy(alpha = 0.4f), RoundedCornerShape(4.dp))
+                                .background(Color(0x22000000), RoundedCornerShape(4.dp))
+                                .clickable {
+                                    isSelectionMode = true
+                                    selectedUrls = emptySet()
+                                }
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                .testTag("enter_select_mode_btn")
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Public,
-                                contentDescription = null,
-                                tint = Color.Black,
-                                modifier = Modifier.size(12.dp)
-                            )
                             Text(
-                                text = "SATELLITE",
-                                style = PipBoyTypography.labelSmall.copy(fontSize = 9.sp, color = Color.Black),
-                                modifier = Modifier.padding(start = 2.dp)
+                                text = "SELECT",
+                                style = PipBoyTypography.labelSmall.copy(fontSize = 9.sp, color = PhosphorSecondary)
+                            )
+                        }
+
+                        if (selectedCategory != "ALL") {
+                            Text(
+                                text = "[ $selectedCategory ]",
+                                style = PipBoyTypography.labelSmall.copy(
+                                    fontSize = 10.sp,
+                                    color = PhosphorSecondary
+                                )
                             )
                         }
                     }
                 }
             }
-        }
+
+
 
         // Station List LazyColumn
         LazyColumn(
@@ -581,7 +538,12 @@ fun StationListSection(
                                     }
 
                                     OutlinedButton(
-                                        onClick = { onSearchSatellite(searchQuery) },
+                                        onClick = {
+                                            isLocalMode = false
+                                            if (searchQuery.isNotBlank()) {
+                                                onSearchOnline(searchQuery, selectedFilterType)
+                                            }
+                                        },
                                         shape = RoundedCornerShape(6.dp),
                                         colors = ButtonDefaults.outlinedButtonColors(contentColor = AccentAmber),
                                         border = ButtonDefaults.outlinedButtonBorder.copy(
@@ -641,7 +603,284 @@ fun StationListSection(
                 }
             }
         }
+    } else {
+            // SATELLITE SCAN MODE - Online Radio-Browser Directory
+            // Filter Type Selector Pills
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+            ) {
+                listOf(
+                    "name" to "NAME",
+                    "tag" to "GENRE",
+                    "country" to "COUNTRY",
+                    "language" to "LANGUAGE"
+                ).forEach { (type, label) ->
+                    val isSel = selectedFilterType == type
+                    Box(
+                        modifier = Modifier
+                            .border(
+                                1.dp,
+                                if (isSel) AccentAmber else SurfaceBorder.copy(alpha = 0.4f),
+                                RoundedCornerShape(4.dp)
+                            )
+                            .background(
+                                if (isSel) AccentAmber.copy(alpha = 0.2f) else Color.Transparent,
+                                RoundedCornerShape(4.dp)
+                            )
+                            .clickable { selectedFilterType = type }
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            text = label,
+                            style = PipBoyTypography.labelSmall.copy(
+                                fontSize = 11.sp,
+                                color = if (isSel) AccentAmber else PhosphorSecondary
+                            )
+                        )
+                    }
+                }
+            }
+
+            // Satellite Search Bar
+            var satelliteQuery by rememberSaveable { mutableStateOf("") }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedTextField(
+                    value = satelliteQuery,
+                    onValueChange = { satelliteQuery = it },
+                    singleLine = true,
+                    placeholder = {
+                        Text(
+                            "SCAN: jazz, bbc, india, ambient...",
+                            style = PipBoyTypography.bodyMedium.copy(fontSize = 12.sp)
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Public,
+                            contentDescription = "Satellite",
+                            tint = AccentAmber
+                        )
+                    },
+                    trailingIcon = {
+                        if (satelliteQuery.isNotEmpty()) {
+                            IconButton(onClick = {
+                                satelliteQuery = ""
+                                onClearSearchResults()
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Clear",
+                                    tint = PhosphorSecondary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    },
+                    textStyle = PipBoyTypography.bodyLarge.copy(fontSize = 13.sp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = AccentAmber,
+                        unfocusedBorderColor = SurfaceBorder.copy(alpha = 0.5f),
+                        focusedTextColor = AccentAmber,
+                        unfocusedTextColor = PhosphorSecondary,
+                        cursorColor = AccentAmber,
+                        focusedContainerColor = SurfaceCard,
+                        unfocusedContainerColor = SurfaceCard
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("satellite_search_input")
+                )
+
+                Button(
+                    onClick = { onSearchOnline(satelliteQuery, selectedFilterType) },
+                    enabled = !isSearching && satelliteQuery.isNotBlank(),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = AccentAmber,
+                        contentColor = Color.Black
+                    ),
+                    modifier = Modifier
+                        .height(50.dp)
+                        .testTag("satellite_search_btn")
+                ) {
+                    if (isSearching) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = Color.Black
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search",
+                            tint = Color.Black,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+
+            if (searchError != null) {
+                Text(
+                    text = "> $searchError",
+                    style = PipBoyTypography.labelSmall.copy(fontSize = 10.sp, color = AccentRed),
+                    modifier = Modifier.padding(vertical = 2.dp)
+                )
+            }
+
+            // Search Results Header with ADD ALL
+            if (searchResults.isNotEmpty()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "> ${searchResults.size} SATELLITE SIGNALS",
+                        style = PipBoyTypography.labelSmall.copy(fontSize = 11.sp, color = AccentAmber)
+                    )
+
+                    Button(
+                        onClick = onAddAllSearchResults,
+                        shape = RoundedCornerShape(4.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = PhosphorPrimary,
+                            contentColor = Color.Black
+                        ),
+                        modifier = Modifier
+                            .height(28.dp)
+                            .testTag("satellite_add_all_btn")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = null,
+                            tint = Color.Black,
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Text(
+                            text = "ADD ALL",
+                            style = PipBoyTypography.labelSmall.copy(fontSize = 9.sp, color = Color.Black),
+                            modifier = Modifier.padding(start = 2.dp)
+                        )
+                    }
+                }
+            }
+
+            // Search Results List
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .testTag("satellite_results_list"),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                if (searchResults.isEmpty() && !isSearching && satelliteQuery.isNotBlank()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 28.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "NO SATELLITE SIGNALS DETECTED",
+                                style = PipBoyTypography.titleMedium.copy(
+                                    color = PhosphorSecondary.copy(alpha = 0.7f),
+                                    fontSize = 13.sp
+                                )
+                            )
+                        }
+                    }
+                } else {
+                    itemsIndexed(searchResults, key = { index, s -> "sat_${s.url}_$index" }) { index, station ->
+                        val isAlreadyAdded = activeStationUrls.contains(station.url)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color(0x22000000), RoundedCornerShape(4.dp))
+                                .padding(horizontal = 10.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = station.name,
+                                    style = PipBoyTypography.bodyLarge.copy(
+                                        fontSize = 12.sp,
+                                        color = if (isAlreadyAdded) PhosphorSecondary else PhosphorPrimary
+                                    ),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = "[ ${station.category.uppercase()} ]",
+                                    style = PipBoyTypography.bodyMedium.copy(
+                                        fontSize = 9.sp,
+                                        color = PhosphorSecondary.copy(alpha = 0.7f)
+                                    )
+                                )
+                            }
+
+                            if (isAlreadyAdded) {
+                                Box(
+                                    modifier = Modifier
+                                        .background(PhosphorSecondary.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
+                                        .padding(horizontal = 6.dp, vertical = 3.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = null,
+                                            tint = PhosphorPrimary,
+                                            modifier = Modifier.size(10.dp)
+                                        )
+                                        Text(
+                                            text = "ADDED",
+                                            style = PipBoyTypography.labelSmall.copy(fontSize = 9.sp, color = PhosphorPrimary)
+                                        )
+                                    }
+                                }
+                            } else {
+                                Button(
+                                    onClick = { onAddSearchResult(station) },
+                                    shape = RoundedCornerShape(4.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (isOverdrive) AccentRed else PhosphorPrimary,
+                                        contentColor = Color.Black
+                                    ),
+                                    modifier = Modifier.height(28.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = "Add",
+                                        tint = Color.Black,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                    Text(
+                                        text = "ADD",
+                                        style = PipBoyTypography.labelSmall.copy(fontSize = 9.sp, color = Color.Black),
+                                        modifier = Modifier.padding(start = 2.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
+}
 }
 
 /**

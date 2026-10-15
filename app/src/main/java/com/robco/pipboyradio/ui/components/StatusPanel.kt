@@ -8,20 +8,18 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -52,7 +50,6 @@ fun StatusPanel(
     isPlaying: Boolean,
     isOverdrive: Boolean,
     onOpenMetadata: () -> Unit,
-    onBrowseStations: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "BlinkTransition")
@@ -66,114 +63,59 @@ fun StatusPanel(
         label = "blinkAlpha"
     )
 
-    val borderColor = if (isOverdrive) AccentRed else SurfaceBorder
     val isAlert = statusSignal.contains("ERR") || statusSignal.contains("ACQUIRING")
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .border(1.dp, borderColor, RoundedCornerShape(10.dp))
             .background(SurfaceCard, RoundedCornerShape(10.dp))
             .padding(horizontal = 12.dp, vertical = 10.dp)
             .testTag("status_panel"),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        // Top Row: Frequency Band & Signal Badge + Quick Actions (Metadata & Tuner)
+        // Top Row: Signal Badge & Quick Metadata Action
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                // Status pill
-                Box(
-                    modifier = Modifier
-                        .border(
-                            1.dp,
-                            if (isAlert) AccentRed else if (isPlaying) PhosphorPrimary else PhosphorSecondary.copy(alpha = 0.5f),
-                            RoundedCornerShape(4.dp)
-                        )
-                        .background(
-                            if (isAlert) AccentRed.copy(alpha = 0.2f) else if (isPlaying) PhosphorSecondary.copy(alpha = 0.2f) else Color.Transparent,
-                            RoundedCornerShape(4.dp)
-                        )
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                ) {
-                    Text(
-                        text = if (isPlaying) "● $statusSignal" else "■ STANDBY",
-                        style = PipBoyTypography.labelSmall.copy(
-                            fontSize = 10.sp,
-                            color = if (isAlert) AccentRed else if (isPlaying) PhosphorPrimary else PhosphorSecondary
-                        ),
-                        modifier = Modifier.alpha(if (isAlert) blinkAlpha else 1f)
+            // Status pill
+            Box(
+                modifier = Modifier
+                    .border(
+                        1.dp,
+                        if (isAlert) AccentRed else if (isPlaying) PhosphorPrimary else PhosphorSecondary.copy(alpha = 0.5f),
+                        RoundedCornerShape(4.dp)
                     )
-                }
-
-                // Dial frequency badge
+                    .background(
+                        if (isAlert) AccentRed.copy(alpha = 0.2f) else if (isPlaying) PhosphorSecondary.copy(alpha = 0.2f) else Color.Transparent,
+                        RoundedCornerShape(4.dp)
+                    )
+                    .padding(horizontal = 6.dp, vertical = 2.dp)
+            ) {
                 Text(
-                    text = streamMetadata.frequencyDial,
-                    style = PipBoyTypography.labelSmall.copy(fontSize = 11.sp, color = AccentAmber)
+                    text = if (isPlaying) "● $statusSignal" else "■ STANDBY",
+                    style = PipBoyTypography.labelSmall.copy(
+                        fontSize = 10.sp,
+                        color = if (isAlert) AccentRed else if (isPlaying) PhosphorPrimary else PhosphorSecondary
+                    ),
+                    modifier = Modifier.alpha(if (isAlert) blinkAlpha else 1f)
                 )
             }
 
-            // Quick Actions: [ ℹ METADATA ] & [ TUNER ]
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                // Metadata Button
-                Box(
-                    modifier = Modifier
-                        .border(1.dp, SurfaceBorder.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
-                        .background(Color(0x33000000), RoundedCornerShape(4.dp))
-                        .clickable { onOpenMetadata() }
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                        .testTag("status_open_metadata_btn"),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(3.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = "Metadata",
-                            tint = PhosphorPrimary,
-                            modifier = Modifier.size(12.dp)
-                        )
-                        Text(
-                            text = "METADATA",
-                            style = PipBoyTypography.labelSmall.copy(fontSize = 10.sp, color = PhosphorPrimary)
-                        )
-                    }
-                }
-
-                // Tuner browse button
-                Box(
-                    modifier = Modifier
-                        .border(1.dp, SurfaceBorder.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
-                        .background(Color(0x33000000), RoundedCornerShape(4.dp))
-                        .clickable { onBrowseStations() }
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                        .testTag("status_open_tuner_btn"),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(3.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.List,
-                            contentDescription = "Tuner",
-                            tint = PhosphorSecondary,
-                            modifier = Modifier.size(12.dp)
-                        )
-                        Text(
-                            text = "TUNER",
-                            style = PipBoyTypography.labelSmall.copy(fontSize = 10.sp, color = PhosphorSecondary)
-                        )
-                    }
-                }
+            // Compact Metadata Icon Button
+            IconButton(
+                onClick = onOpenMetadata,
+                modifier = Modifier
+                    .size(32.dp)
+                    .testTag("status_open_metadata_btn")
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = "Metadata",
+                    tint = if (isOverdrive) AccentRed else PhosphorPrimary,
+                    modifier = Modifier.size(18.dp)
+                )
             }
         }
 
@@ -182,7 +124,7 @@ fun StatusPanel(
             text = currentStation?.name ?: "--- NO FREQUENCY LOCKED ---",
             style = PipBoyTypography.headlineLarge.copy(
                 color = if (isOverdrive) AccentRed else PhosphorPrimary,
-                fontSize = 17.sp,
+                fontSize = 18.sp,
                 letterSpacing = 0.5.sp
             ),
             maxLines = 1,
@@ -190,40 +132,44 @@ fun StatusPanel(
             modifier = Modifier.testTag("current_station_name")
         )
 
-        // Bottom Row: Live Now Playing Metadata Line or Category
+        // Bottom Row: Live Now Playing Metadata Line or Category & Dial
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Row(
-                modifier = Modifier.weight(1f),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Text(
-                    text = if (isPlaying && streamMetadata.title != null) "♪" else ">",
-                    style = PipBoyTypography.labelSmall.copy(
-                        color = if (isPlaying) AccentAmber else PhosphorSecondary,
-                        fontSize = 11.sp
-                    )
+            Text(
+                text = if (isPlaying) "♪" else ">",
+                style = PipBoyTypography.labelSmall.copy(
+                    color = if (isPlaying) AccentAmber else PhosphorSecondary,
+                    fontSize = 11.sp
                 )
+            )
 
-                Text(
-                    text = if (isPlaying) nowPlayingText else (currentStation?.category?.uppercase()?.let { "[ $it ]" } ?: "[ READY ]"),
-                    style = PipBoyTypography.bodyMedium.copy(
-                        fontSize = 11.sp,
-                        color = if (isPlaying) Color(0xFFDDFFDD) else PhosphorSecondary
-                    ),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.testTag("now_playing_text")
-                )
+            val subtitleText = if (isPlaying) {
+                if (streamMetadata.bitrate.isNotBlank()) {
+                    "$nowPlayingText • ${streamMetadata.bitrate}"
+                } else {
+                    nowPlayingText
+                }
+            } else {
+                val category = currentStation?.category?.uppercase()?.let { "[ $it ]" } ?: "[ READY ]"
+                if (streamMetadata.frequencyDial.isNotBlank()) {
+                    "$category • ${streamMetadata.frequencyDial}"
+                } else {
+                    category
+                }
             }
 
             Text(
-                text = streamMetadata.bitrate,
-                style = PipBoyTypography.labelSmall.copy(fontSize = 10.sp, color = PhosphorSecondary.copy(alpha = 0.7f))
+                text = subtitleText,
+                style = PipBoyTypography.bodyMedium.copy(
+                    fontSize = 11.sp,
+                    color = if (isPlaying) Color(0xFFDDFFDD) else PhosphorSecondary
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.testTag("now_playing_text")
             )
         }
     }

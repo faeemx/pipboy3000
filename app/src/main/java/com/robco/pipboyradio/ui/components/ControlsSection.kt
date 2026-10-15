@@ -52,16 +52,13 @@ fun ControlsSection(
     onVolumeChange: (Float) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val borderColor = if (isOverdrive) AccentRed else SurfaceBorder
-
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .border(1.dp, borderColor, RoundedCornerShape(10.dp))
             .background(SurfaceCard, RoundedCornerShape(10.dp))
             .padding(10.dp)
             .testTag("controls_section"),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         // Main Action Power & Step Row
         Row(
@@ -164,8 +161,6 @@ fun ControlsSection(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color(0x33000000), RoundedCornerShape(6.dp))
-                .border(1.dp, SurfaceBorder.copy(alpha = 0.2f), RoundedCornerShape(6.dp))
                 .padding(horizontal = 10.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)

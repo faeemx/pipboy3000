@@ -89,7 +89,7 @@ fun TerminalHeader(
                 )
             }
 
-            // Tactical Mode Switch (Overdrive button with min 48dp touch target)
+            // Tactical Mode Switch (Overdrive button)
             Box(
                 modifier = Modifier
                     .border(
@@ -102,12 +102,12 @@ fun TerminalHeader(
                         shape = RoundedCornerShape(6.dp)
                     )
                     .clickable { onToggleOverdrive() }
-                    .padding(horizontal = 12.dp, vertical = 10.dp)
+                    .padding(horizontal = 8.dp, vertical = 6.dp)
                     .testTag("overdrive_toggle_btn"),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = if (isOverdrive) "⚡ OVERDRIVE ON" else "● OVERDRIVE OFF",
+                    text = if (isOverdrive) "⚡ OVR" else "● OVR",
                     style = PipBoyTypography.labelSmall.copy(
                         fontSize = 11.sp,
                         color = if (isOverdrive) AccentRed else PhosphorPrimary

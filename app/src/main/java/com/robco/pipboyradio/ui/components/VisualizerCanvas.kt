@@ -86,74 +86,59 @@ fun VisualizerCanvas(
         label = "fastPulse"
     )
 
+    val cycleNextStyle = {
+        val styles = VisualizerStyle.values()
+        val nextIndex = (selectedStyle.ordinal + 1) % styles.size
+        selectedStyle = styles[nextIndex]
+    }
+
     val borderColor = if (isOverdrive) AccentRed else SurfaceBorder
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .border(1.dp, borderColor, RoundedCornerShape(10.dp))
             .background(SurfaceCard, RoundedCornerShape(10.dp))
             .padding(10.dp)
             .testTag("visualizer_box"),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        // Header with Title and Interactive Style Switcher
+        // Header with Title and Interactive Style Cycler
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "[ VISUALIZER // ${selectedStyle.displayName} ]",
+                text = "[ AUDIO VISUALIZER ]",
                 style = PipBoyTypography.labelSmall.copy(
                     fontSize = 11.sp,
                     color = if (isOverdrive) AccentRed else PhosphorPrimary
                 )
             )
 
-            // Interactive Style Pills Row
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically
+            // Interactive Mode Cycler Pill
+            Box(
+                modifier = Modifier
+                    .border(
+                        width = 1.dp,
+                        color = if (isOverdrive) AccentRed else PhosphorPrimary,
+                        shape = RoundedCornerShape(4.dp)
+                    )
+                    .background(
+                        color = if (isOverdrive) AccentRed.copy(alpha = 0.25f) else PhosphorSecondary.copy(alpha = 0.25f),
+                        shape = RoundedCornerShape(4.dp)
+                    )
+                    .clickable { cycleNextStyle() }
+                    .padding(horizontal = 6.dp, vertical = 3.dp)
+                    .testTag("vis_style_cycler")
             ) {
-                VisualizerStyle.values().forEach { style ->
-                    val isCurrent = selectedStyle == style
-                    Box(
-                        modifier = Modifier
-                            .border(
-                                width = 1.dp,
-                                color = if (isCurrent) {
-                                    if (isOverdrive) AccentRed else PhosphorPrimary
-                                } else {
-                                    SurfaceBorder.copy(alpha = 0.35f)
-                                },
-                                shape = RoundedCornerShape(4.dp)
-                            )
-                            .background(
-                                color = if (isCurrent) {
-                                    if (isOverdrive) AccentRed.copy(alpha = 0.25f) else PhosphorSecondary.copy(alpha = 0.25f)
-                                } else {
-                                    Color.Transparent
-                                },
-                                shape = RoundedCornerShape(4.dp)
-                            )
-                            .clickable { selectedStyle = style }
-                            .padding(horizontal = 6.dp, vertical = 3.dp)
-                            .testTag("vis_style_${style.name}")
-                    ) {
-                        Text(
-                            text = style.displayName,
-                            style = PipBoyTypography.labelSmall.copy(
-                                fontSize = 9.sp,
-                                color = if (isCurrent) {
-                                    if (isOverdrive) AccentRed else PhosphorPrimary
-                                } else {
-                                    PhosphorSecondary.copy(alpha = 0.7f)
-                                }
-                            )
-                        )
-                    }
-                }
+                Text(
+                    text = "[ MODE: ${selectedStyle.displayName} ↻ ]",
+                    style = PipBoyTypography.labelSmall.copy(
+                        fontSize = 10.sp,
+                        color = if (isOverdrive) AccentRed else PhosphorPrimary
+                    )
+                )
             }
         }
 
@@ -164,6 +149,7 @@ fun VisualizerCanvas(
                 .weight(1f)
                 .background(Color(0xFF040705), RoundedCornerShape(6.dp))
                 .border(1.dp, borderColor.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+                .clickable { cycleNextStyle() }
                 .padding(horizontal = 8.dp, vertical = 6.dp)
         ) {
             Canvas(modifier = Modifier.fillMaxSize()) {

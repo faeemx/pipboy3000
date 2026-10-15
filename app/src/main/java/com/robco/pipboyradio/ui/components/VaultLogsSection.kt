@@ -1,10 +1,8 @@
 package com.robco.pipboyradio.ui.components
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,27 +17,19 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DisplaySettings
 import androidx.compose.material.icons.filled.FolderZip
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Radio
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -52,7 +42,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.robco.pipboyradio.data.model.Station
@@ -70,10 +59,6 @@ fun VaultLogsSection(
     isRepoLoading: Boolean = false,
     repoStatusMessage: String? = null,
     totalStationCount: Int = 0,
-    activeStations: List<Station> = emptyList(),
-    searchResults: List<Station> = emptyList(),
-    isSearching: Boolean = false,
-    searchError: String? = null,
     showRepoModal: Boolean = false,
     // Settings toggles & preferences
     autoPlayNextOnError: Boolean = true,
@@ -90,10 +75,6 @@ fun VaultLogsSection(
     onOpenAddStationDialog: () -> Unit = {},
     onOpenRepoModal: () -> Unit = {},
     onCloseRepoModal: () -> Unit = {},
-    onSearchOnline: (query: String, filterType: String) -> Unit = { _, _ -> },
-    onClearSearchResults: () -> Unit = {},
-    onAddStation: (Station) -> Unit = {},
-    onAddAllSearchResults: () -> Unit = {},
     onRemoveStation: (Station) -> Unit = {},
     onLoadRawJsonUrl: (url: String, append: Boolean) -> Unit = { _, _ -> },
     onLoadBundledStations: (append: Boolean) -> Unit = {},
@@ -103,11 +84,7 @@ fun VaultLogsSection(
 ) {
     val borderColor = if (isOverdrive) AccentRed else SurfaceBorder
 
-    var onlineSearchQuery by rememberSaveable { mutableStateOf("") }
-    var selectedFilterType by rememberSaveable { mutableStateOf("name") }
     var showPurgeConfirmDialog by rememberSaveable { mutableStateOf(false) }
-
-    val activeStationUrlSet = activeStations.map { it.url }.toSet()
 
     // Repository Manager Popup Dialog
     RepoManagerDialog(
@@ -469,263 +446,7 @@ fun VaultLogsSection(
             }
         }
 
-        // Card 4: Satellite Radio-Browser Search & Add (+)
-        SettingsCard(
-            title = "GLOBAL SATELLITE SEARCH & ADD",
-            borderColor = borderColor,
-            icon = Icons.Default.Public
-        ) {
-            Text(
-                text = "> SCAN WORLDWIDE RADIO-BROWSER DIRECTORY:",
-                style = PipBoyTypography.labelSmall.copy(fontSize = 10.sp, color = PhosphorSecondary)
-            )
-
-            // Filter Type Selector Pills
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                listOf(
-                    "name" to "NAME",
-                    "tag" to "TAG / GENRE",
-                    "country" to "COUNTRY",
-                    "language" to "LANGUAGE"
-                ).forEach { (type, label) ->
-                    val isSel = selectedFilterType == type
-                    Box(
-                        modifier = Modifier
-                            .border(
-                                1.dp,
-                                if (isSel) (if (isOverdrive) AccentRed else PhosphorPrimary) else SurfaceBorder.copy(alpha = 0.4f),
-                                RoundedCornerShape(4.dp)
-                            )
-                            .background(
-                                if (isSel) PhosphorSecondary.copy(alpha = 0.25f) else Color.Transparent,
-                                RoundedCornerShape(4.dp)
-                            )
-                            .clickable { selectedFilterType = type }
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = label,
-                            style = PipBoyTypography.labelSmall.copy(
-                                fontSize = 10.sp,
-                                color = if (isSel) PhosphorPrimary else PhosphorSecondary
-                            )
-                        )
-                    }
-                }
-            }
-
-            // Search Bar Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                OutlinedTextField(
-                    value = onlineSearchQuery,
-                    onValueChange = { onlineSearchQuery = it },
-                    singleLine = true,
-                    placeholder = {
-                        Text(
-                            "e.g. jazz, bbc, india, ambient...",
-                            style = PipBoyTypography.bodyMedium.copy(fontSize = 11.sp)
-                        )
-                    },
-                    trailingIcon = {
-                        if (onlineSearchQuery.isNotEmpty()) {
-                            IconButton(onClick = {
-                                onlineSearchQuery = ""
-                                onClearSearchResults()
-                            }) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = "Clear",
-                                    tint = PhosphorSecondary
-                                )
-                            }
-                        }
-                    },
-                    textStyle = PipBoyTypography.bodyMedium.copy(fontSize = 11.sp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = if (isOverdrive) AccentRed else PhosphorPrimary,
-                        unfocusedBorderColor = SurfaceBorder.copy(alpha = 0.4f),
-                        focusedTextColor = if (isOverdrive) AccentRed else PhosphorPrimary,
-                        unfocusedTextColor = PhosphorSecondary,
-                        cursorColor = AccentAmber,
-                        focusedContainerColor = Color(0x33000000),
-                        unfocusedContainerColor = Color(0x33000000)
-                    ),
-                    shape = RoundedCornerShape(6.dp),
-                    modifier = Modifier
-                        .weight(1f)
-                        .testTag("settings_satellite_search_input")
-                )
-
-                Button(
-                    onClick = { onSearchOnline(onlineSearchQuery, selectedFilterType) },
-                    enabled = !isSearching && onlineSearchQuery.isNotBlank(),
-                    shape = RoundedCornerShape(6.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = AccentAmber,
-                        contentColor = Color.Black
-                    ),
-                    modifier = Modifier
-                        .height(50.dp)
-                        .testTag("settings_satellite_search_btn")
-                ) {
-                    if (isSearching) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp,
-                            color = Color.Black
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = "Search",
-                            tint = Color.Black,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
-            }
-
-            if (searchError != null) {
-                Text(
-                    text = "> $searchError",
-                    style = PipBoyTypography.labelSmall.copy(fontSize = 10.sp, color = AccentRed),
-                    modifier = Modifier.padding(vertical = 2.dp)
-                )
-            }
-
-            // Search Results with [+] Button
-            if (searchResults.isNotEmpty()) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "> ${searchResults.size} SATELLITE SIGNALS",
-                        style = PipBoyTypography.labelSmall.copy(fontSize = 11.sp, color = AccentAmber)
-                    )
-
-                    Button(
-                        onClick = onAddAllSearchResults,
-                        shape = RoundedCornerShape(4.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = PhosphorPrimary,
-                            contentColor = Color.Black
-                        ),
-                        modifier = Modifier
-                            .height(28.dp)
-                            .testTag("settings_add_all_results_btn")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = null,
-                            tint = Color.Black,
-                            modifier = Modifier.size(12.dp)
-                        )
-                        Text(
-                            text = "ADD ALL TO TUNER",
-                            style = PipBoyTypography.labelSmall.copy(fontSize = 9.sp, color = Color.Black),
-                            modifier = Modifier.padding(start = 2.dp)
-                        )
-                    }
-                }
-
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    searchResults.take(25).forEachIndexed { index, station ->
-                        val isAlreadyAdded = activeStationUrlSet.contains(station.url)
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .border(0.5.dp, SurfaceBorder.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
-                                .background(Color(0x22000000), RoundedCornerShape(4.dp))
-                                .padding(horizontal = 8.dp, vertical = 6.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = station.name,
-                                    style = PipBoyTypography.bodyLarge.copy(
-                                        fontSize = 12.sp,
-                                        color = if (isAlreadyAdded) PhosphorSecondary else PhosphorPrimary
-                                    ),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-
-                                Text(
-                                    text = "[ ${station.category.uppercase()} ]",
-                                    style = PipBoyTypography.bodyMedium.copy(
-                                        fontSize = 9.sp,
-                                        color = PhosphorSecondary.copy(alpha = 0.7f)
-                                    )
-                                )
-                            }
-
-                            if (isAlreadyAdded) {
-                                Box(
-                                    modifier = Modifier
-                                        .border(1.dp, PhosphorSecondary.copy(alpha = 0.4f), RoundedCornerShape(4.dp))
-                                        .background(PhosphorSecondary.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
-                                        .padding(horizontal = 6.dp, vertical = 3.dp)
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(2.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Check,
-                                            contentDescription = null,
-                                            tint = PhosphorPrimary,
-                                            modifier = Modifier.size(10.dp)
-                                        )
-                                        Text(
-                                            text = "ADDED",
-                                            style = PipBoyTypography.labelSmall.copy(fontSize = 9.sp, color = PhosphorPrimary)
-                                        )
-                                    }
-                                }
-                            } else {
-                                Button(
-                                    onClick = { onAddStation(station) },
-                                    shape = RoundedCornerShape(4.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (isOverdrive) AccentRed else PhosphorPrimary,
-                                        contentColor = Color.Black
-                                    ),
-                                    modifier = Modifier.height(28.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Add,
-                                        contentDescription = "Add",
-                                        tint = Color.Black,
-                                        modifier = Modifier.size(12.dp)
-                                    )
-                                    Text(
-                                        text = "ADD",
-                                        style = PipBoyTypography.labelSmall.copy(fontSize = 9.sp, color = Color.Black),
-                                        modifier = Modifier.padding(start = 2.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Card 5: System Telemetry (Clean & Minimal)
+        // Card 4: System Telemetry (Clean & Minimal)
         SettingsCard(
             title = "ROBCO SYSTEM DIAGNOSTICS",
             borderColor = borderColor,

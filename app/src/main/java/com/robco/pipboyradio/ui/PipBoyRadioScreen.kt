@@ -136,8 +136,7 @@ fun PipBoyRadioScreen(
                                     onNextStation = { viewModel.nextStation() },
                                     onVolumeChange = { viewModel.setVolume(it) },
                                     onToggleOverdrive = { viewModel.toggleOverdrive() },
-                                    onOpenMetadata = { viewModel.openMetadataDialog() },
-                                    onBrowseStations = { viewModel.setTab(PipBoyTab.TUNER) }
+                                    onOpenMetadata = { viewModel.openMetadataDialog() }
                                 )
                             }
 
@@ -156,10 +155,14 @@ fun PipBoyRadioScreen(
                                     onRemoveStation = { viewModel.removeStationFromTuner(it) },
                                     onRemoveMultipleStations = { viewModel.removeStationsFromTuner(it) },
                                     onOpenAddStation = { name, url -> viewModel.openAddStationDialog(name, url) },
-                                    onSearchSatellite = { query ->
-                                        viewModel.setTab(PipBoyTab.SETTINGS)
-                                        viewModel.searchOnlineStations(query, "name")
-                                    }
+                                    searchResults = uiState.searchResults,
+                                    isSearching = uiState.isSearching,
+                                    searchError = uiState.searchError,
+                                    onSearchOnline = { query, filterType -> viewModel.searchOnlineStations(query, filterType) },
+                                    onClearSearchResults = { viewModel.clearSearchResults() },
+                                    onAddSearchResult = { viewModel.addStationToTuner(it) },
+                                    onAddAllSearchResults = { viewModel.addAllSearchResultsToTuner() },
+                                    activeStationUrls = filteredStations.map { it.url }.toSet()
                                 )
                             }
 
@@ -169,10 +172,6 @@ fun PipBoyRadioScreen(
                                     isRepoLoading = uiState.isRepoLoading,
                                     repoStatusMessage = uiState.repoStatusMessage,
                                     totalStationCount = uiState.totalStationCount,
-                                    activeStations = filteredStations,
-                                    searchResults = uiState.searchResults,
-                                    isSearching = uiState.isSearching,
-                                    searchError = uiState.searchError,
                                     showRepoModal = uiState.showRepoModal,
                                     autoPlayNextOnError = uiState.autoPlayNextOnError,
                                     dataSaverBuffer = uiState.dataSaverBuffer,
@@ -188,10 +187,6 @@ fun PipBoyRadioScreen(
                                     onOpenAddStationDialog = { viewModel.openAddStationDialog() },
                                     onOpenRepoModal = { viewModel.setShowRepoModal(true) },
                                     onCloseRepoModal = { viewModel.setShowRepoModal(false) },
-                                    onSearchOnline = { query, filterType -> viewModel.searchOnlineStations(query, filterType) },
-                                    onClearSearchResults = { viewModel.clearSearchResults() },
-                                    onAddStation = { viewModel.addStationToTuner(it) },
-                                    onAddAllSearchResults = { viewModel.addAllSearchResultsToTuner() },
                                     onRemoveStation = { viewModel.removeStationFromTuner(it) },
                                     onLoadRawJsonUrl = { url, append -> viewModel.loadFromRawJsonUrl(url, append) },
                                     onLoadBundledStations = { append -> viewModel.loadBundledStations(append) },

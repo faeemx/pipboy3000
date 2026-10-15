@@ -75,10 +75,9 @@ fun MiniPlayerBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .border(1.dp, borderColor, RoundedCornerShape(8.dp))
             .background(SurfaceCard, RoundedCornerShape(8.dp))
             .clickable { onExpand() }
-            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .padding(horizontal = 10.dp, vertical = 6.dp)
             .testTag("mini_player_bar")
     ) {
         Row(
@@ -89,7 +88,7 @@ fun MiniPlayerBar(
             // Left: Mini animated frequency waveform indicator
             Canvas(
                 modifier = Modifier
-                    .size(width = 36.dp, height = 24.dp)
+                    .size(width = 28.dp, height = 20.dp)
                     .padding(end = 4.dp)
             ) {
                 val barCount = 5
@@ -118,7 +117,7 @@ fun MiniPlayerBar(
                     text = station?.name ?: "--- NO SIGNAL ---",
                     style = PipBoyTypography.bodyLarge.copy(
                         color = if (isOverdrive) AccentRed else PhosphorPrimary,
-                        fontSize = 13.sp
+                        fontSize = 12.sp
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -141,7 +140,7 @@ fun MiniPlayerBar(
                 IconButton(
                     onClick = onTogglePower,
                     modifier = Modifier
-                        .size(44.dp)
+                        .size(38.dp)
                         .testTag("mini_player_toggle_btn")
                 ) {
                     Icon(
@@ -154,7 +153,7 @@ fun MiniPlayerBar(
                 IconButton(
                     onClick = onNextStation,
                     modifier = Modifier
-                        .size(44.dp)
+                        .size(38.dp)
                         .testTag("mini_player_next_btn")
                 ) {
                     Icon(

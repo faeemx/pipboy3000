@@ -26,7 +26,6 @@ fun ReceiverScreen(
     onVolumeChange: (Float) -> Unit,
     onToggleOverdrive: () -> Unit,
     onOpenMetadata: () -> Unit,
-    onBrowseStations: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -58,8 +57,7 @@ fun ReceiverScreen(
             nowPlayingText = nowPlayingText,
             isPlaying = isPlaying,
             isOverdrive = isOverdrive,
-            onOpenMetadata = onOpenMetadata,
-            onBrowseStations = onBrowseStations
+            onOpenMetadata = onOpenMetadata
         )
 
         // Primary Playback Console (Tactile Power, Stepper & Volume)
